@@ -29,9 +29,6 @@
 
 #include "net.h"
 
-#include <errno.h>
-#include <sys/types.h>
-
 /*****************************************************************************
  *
  * check_interface()

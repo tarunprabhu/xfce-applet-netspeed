@@ -60,7 +60,6 @@ typedef struct {
   GdkRGBA color[SUM];
   gchar *label_text;
   gchar *network_device;
-  gchar *old_network_device;
 } t_monitor_options;
 
 typedef struct {
@@ -336,7 +335,6 @@ static t_global_monitor *monitor_new(XfcePanelPlugin *plugin) {
   global->monitor = g_new(t_monitor, 1);
   global->monitor->options.label_text = g_strdup(_("Net"));
   global->monitor->options.network_device = g_strdup("");
-  global->monitor->options.old_network_device = g_strdup("");
   global->monitor->options.auto_max = TRUE;
   global->monitor->options.update_interval = UPDATE_TIMEOUT;
 
@@ -474,12 +472,6 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
         _("xfce4-applet-netspeed"),
         _("Interface was not found"));
   }
-
-  if (global->monitor->options.old_network_device) {
-    g_free(global->monitor->options.old_network_device);
-  }
-  global->monitor->options.old_network_device =
-      g_strdup(global->monitor->options.network_device);
 
   monitor_set_mode(global->plugin, xfce_panel_plugin_get_mode(global->plugin),
                    global);

@@ -30,24 +30,8 @@
 #define FALSE 0
 #endif
 
-#include <stdio.h>
-#include <sys/param.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <unistd.h>
-#include <string.h>
-#include <time.h>
-#include <ctype.h>
-#include <signal.h>
-#include <sys/wait.h>
-#include <sys/stat.h>
-#include <sys/ioctl.h>
-#include <sys/types.h>
-#include <sys/socket.h>
+#include <linux/limits.h>
 #include <sys/time.h>
-#include <netinet/in.h>
-#include <net/if.h>
-#include <arpa/inet.h>
 
 #define INTERFACE_NAME_LENGTH 33
 
@@ -65,7 +49,6 @@ typedef struct {
   int correct_interface;
   struct timeval prev_time;
   DataStats stats;
-  char old_if_name[INTERFACE_NAME_LENGTH];
   char if_name[INTERFACE_NAME_LENGTH];
   char file_rx_bytes[PATH_MAX];
   char file_tx_bytes[PATH_MAX];

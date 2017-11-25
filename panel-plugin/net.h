@@ -49,22 +49,7 @@
 #include <net/if.h>
 #include <arpa/inet.h>
 
-#define MSGSIZE 1024
-#define UP_UPDATE_INTERVAL 20
-#define IP_UPDATE_INTERVAL 20
-#define IP_ADDRESS_LENGTH 64
 #define INTERFACE_NAME_LENGTH 33
-
-#ifndef gettext_noop
-#define gettext_noop(String) String
-#endif
-
-/** errorcodes */
-typedef enum {
-  UNKNOWN_ERROR,
-  PROC_DEVICE_NOT_FOUND,
-  INTERFACE_NOT_FOUND
-} errorcode_t;
 
 /* This structure stays the INFO variables */
 typedef struct DataStats {
@@ -73,18 +58,14 @@ typedef struct DataStats {
 } DataStats;
 
 typedef struct {
-  char old_interface[INTERFACE_NAME_LENGTH];
   double backup_in;
-  errorcode_t errorcode;
   double backup_out;
   double cur_in;
   double cur_out;
+  int correct_interface;
   struct timeval prev_time;
-  int correct_interface; /* treated as boolean */
-  int ip_update_count;
   DataStats stats;
-  int up;
-  int up_update_count;
+  char old_if_name[INTERFACE_NAME_LENGTH];
   char if_name[INTERFACE_NAME_LENGTH];
   char file_rx_bytes[PATH_MAX];
   char file_tx_bytes[PATH_MAX];
@@ -110,19 +91,6 @@ int init_netload(netdata *data, const char *device);
  */
 void get_current_netload(netdata *data, unsigned long *in, unsigned long *out,
                          unsigned long *tot);
-
-/**
- * Returns the name of the network interface.
- * @param data      object
- * @return The name. String resides in data and you don't have to free the
- * string. On error, returns NULL.
- */
-char *get_name(netdata *data);
-
-/**
- * Should be called to do cleanup work.
- */
-void close_netload(netdata *data);
 
 /* 
  * Checks if the interface is exists and is up

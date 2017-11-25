@@ -36,9 +36,6 @@
 
 #define BORDER 8
 
-/* Defaults */
-#define DEFAULT_TEXT N_("Net")
-
 #define INIT_MAX 4096
 #define MINIMAL_MAX 1024
 #define SHRINK_MAX 0.75
@@ -55,12 +52,6 @@ static gchar *DEFAULT_COLOR[] = {"#FF4F00", "#FFE500"};
 #define OUT 1
 #define TOT 2
 #define SUM 2
-
-#define APP_NAME N_("xfce4-applet-netspeed")
-
-static char *errormessages[] = {
-    N_("Unknown error."), N_("Linux proc device '/proc/net/dev' not found."),
-    N_("Interface was not found.")};
 
 typedef struct {
   gboolean auto_max;
@@ -140,7 +131,7 @@ static gboolean update_monitors(t_global_monitor *global) {
 
   if (!check_interface(&(global->monitor->data))) {
     g_snprintf(caption, sizeof(caption), _("%s\n\nInterface down"),
-               get_name(&(global->monitor->data)));
+               global->monitor->data.if_name);
     gtk_label_set_text(GTK_LABEL(global->tooltip_text), caption);
 
     return TRUE;
@@ -222,7 +213,7 @@ static gboolean update_monitors(t_global_monitor *global) {
                  "Upload: %s\n"
                  "---------\n"
                  "Total: %s"),
-               get_name(&(global->monitor->data)), buffer[IN],
+               global->monitor->data.if_name, buffer[IN],
                buffer[OUT], buffer[TOT]);
     gtk_label_set_text(GTK_LABEL(global->tooltip_text), caption);
   }
@@ -317,8 +308,6 @@ static void monitor_free(XfcePanelPlugin *plugin, t_global_monitor *global) {
   gtk_widget_destroy(global->tooltip_text);
 
   g_free(global);
-
-  close_netload(&(global->monitor->data));
 }
 
 static t_global_monitor *monitor_new(XfcePanelPlugin *plugin) {
@@ -345,7 +334,7 @@ static t_global_monitor *monitor_new(XfcePanelPlugin *plugin) {
   xfce_panel_plugin_add_action_widget(plugin, global->ebox);
 
   global->monitor = g_new(t_monitor, 1);
-  global->monitor->options.label_text = g_strdup(_(DEFAULT_TEXT));
+  global->monitor->options.label_text = g_strdup(_("Net"));
   global->monitor->options.network_device = g_strdup("");
   global->monitor->options.old_network_device = g_strdup("");
   global->monitor->options.auto_max = TRUE;
@@ -481,10 +470,9 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
                     global->monitor->options.network_device) &&
       !supress_warnings) {
     xfce_dialog_show_error(
-        NULL, NULL, _("%s: Error in initializing:\n%s"), _(APP_NAME),
-        _(errormessages[global->monitor->data.errorcode == 0
-                            ? INTERFACE_NOT_FOUND
-                            : global->monitor->data.errorcode]));
+        NULL, NULL, _("%s: Error initializing applet\n%s"),
+        _("xfce4-applet-netspeed"),
+        _("Interface was not found"));
   }
 
   if (global->monitor->options.old_network_device) {

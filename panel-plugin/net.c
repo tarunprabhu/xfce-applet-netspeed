@@ -34,7 +34,7 @@
 
 /*****************************************************************************
  *
- * checkinterface()
+ * check_interface()
  *
  * check if a given interface exists and is up.
  * return TRUE if found, FALSE if not
@@ -43,7 +43,7 @@
 
 int check_interface(netdata *data) {
   FILE *fp = NULL;
-  char buf[5];
+  char buf[3];
 
 #ifdef DEBUG
   fprintf(stderr, "Checking the interface '%s' now ...\n",
@@ -51,8 +51,8 @@ int check_interface(netdata *data) {
 #endif
 
   if (fp = fopen(data->file_operstate, "r")) {
-    fgets(buf, 4, fp);
-    if (strncmp(buf, "up", 4))
+    fgets(buf, 3, fp);
+    if (g_strcmp0(buf, "up") == 0)
       return TRUE;
     fclose(fp);
   }
@@ -114,10 +114,6 @@ int init_netload(netdata *data, const char *device) {
   if (device == NULL || strlen(device) == 0) {
     return TRUE;
   }
-
-  data->ip_update_count = 0;
-  data->up = FALSE;
-  data->up_update_count = 0;
 
   g_strlcpy(data->if_name, device, INTERFACE_NAME_LENGTH);
   g_snprintf(data->file_rx_bytes, PATH_MAX,
@@ -191,14 +187,4 @@ void get_current_netload(netdata *data, unsigned long *in, unsigned long *out,
   /* do the same with time */
   data->prev_time.tv_sec = curr_time.tv_sec;
   data->prev_time.tv_usec = curr_time.tv_usec;
-}
-
-/* -------------------------------------------------------------------------- */
-char *get_name(netdata *data) {
-  return data->if_name;
-}
-
-/* -------------------------------------------------------------------------- */
-void close_netload(netdata *data) {
-  ;
 }

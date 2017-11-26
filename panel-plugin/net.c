@@ -79,10 +79,6 @@ static int read_file(const char *filename, unsigned long *out) {
  *
  * get_stat()
  *
- * read the network statistics from /proc/net/dev (PATH_NET_DEV)
- * if the file is not open open it. fseek() to the beginning and parse
- * each line until we've found the right interface
- *
  * returns 0 if successful, 1 in case of error
  *
  *****************************************************************************/
@@ -158,17 +154,15 @@ void get_current_netload(netdata *data, unsigned long *in, unsigned long *out,
   /* update */
   get_stat(data);
   if (data->backup_in > data->stats.rx_bytes) {
-    data->cur_in = (int)(data->stats.rx_bytes / delta_t + 0.5);
+    data->cur_in = (data->stats.rx_bytes / delta_t + 0.5);
   } else {
-    data->cur_in =
-        (int)((data->stats.rx_bytes - data->backup_in) / delta_t + 0.5);
+    data->cur_in = ((data->stats.rx_bytes - data->backup_in) / delta_t + 0.5);
   }
 
   if (data->backup_out > data->stats.tx_bytes) {
-    data->cur_out = (int)(data->stats.tx_bytes / delta_t + 0.5);
+    data->cur_out = (data->stats.tx_bytes / delta_t + 0.5);
   } else {
-    data->cur_out =
-        (int)((data->stats.tx_bytes - data->backup_out) / delta_t + 0.5);
+    data->cur_out = ((data->stats.tx_bytes - data->backup_out) / delta_t + 0.5);
   }
 
   if (in != NULL && out != NULL && tot != NULL) {

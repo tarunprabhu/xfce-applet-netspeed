@@ -360,7 +360,7 @@ static t_global_monitor *monitor_new(XfcePanelPlugin *plugin) {
   global->monitor->label = gtk_label_new(global->monitor->options.label_text);
   gtk_widget_set_name(GTK_WIDGET(global->monitor->label), "label");
   gtk_box_pack_start(GTK_BOX(global->box), GTK_WIDGET(global->monitor->label),
-                     TRUE, FALSE, 2);
+                     FALSE, FALSE, 2);
   css_provider = gtk_css_provider_new();
   gtk_style_context_add_provider(GTK_STYLE_CONTEXT(gtk_widget_get_style_context(
                                      GTK_WIDGET(global->monitor->label))),

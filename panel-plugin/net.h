@@ -30,6 +30,7 @@
 #define FALSE 0
 #endif
 
+#include <unistd.h>
 #include <linux/limits.h>
 #include <sys/time.h>
 
@@ -82,6 +83,6 @@ void get_current_netload(netdata *data, unsigned long *in, unsigned long *out,
  * 
  * Returns TRUE if found and up, FALSE otherwise 
  */
-int check_interface(netdata*);
+int interface_up(netdata*);
 
 #endif /* NET_H */

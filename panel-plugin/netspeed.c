@@ -115,7 +115,7 @@ typedef struct {
 } t_global_monitor;
 
 static void set_progressbar_csscolor(GtkWidget *, GdkRGBA *);
-/* -------------------------------------------------------------------------- */
+
 static gboolean update_monitors(t_global_monitor *global) {
   char buffer[SUM + 1][BUFSIZ];
   char buffer_panel[SUM][BUFSIZ];
@@ -128,7 +128,7 @@ static gboolean update_monitors(t_global_monitor *global) {
   double temp;
   gint i, j;
 
-  if (!check_interface(&(global->monitor->data))) {
+  if (!interface_up(&(global->monitor->data))) {
     g_snprintf(caption, sizeof(caption), _("%s\n\nInterface down"),
                global->monitor->data.if_name);
     gtk_label_set_text(GTK_LABEL(global->tooltip_text), caption);
@@ -136,8 +136,6 @@ static gboolean update_monitors(t_global_monitor *global) {
     return TRUE;
   }
 
-  gtk_label_set_text(GTK_LABEL(global->monitor->label),
-                     global->monitor->options.label_text);
   get_current_netload(&(global->monitor->data), &(net[IN]), &(net[OUT]),
                       &(net[TOT]));
 
@@ -437,6 +435,8 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
   if (global->timeout_id)
     g_source_remove(global->timeout_id);
 
+  gtk_label_set_text(GTK_LABEL(global->monitor->label),
+                     global->monitor->options.label_text);
   gtk_widget_show(global->monitor->label);
 
   gtk_widget_show(global->ebox_bars);

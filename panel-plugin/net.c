@@ -31,14 +31,14 @@
 
 /*****************************************************************************
  *
- * check_interface()
+ * interface_up()
  *
  * check if a given interface exists and is up.
  * return TRUE if found, FALSE if not
  *
  ****************************************************************************/
 
-int check_interface(netdata *data) {
+int interface_up(netdata *data) {
   FILE *fp = NULL;
   char buf[3];
 
@@ -49,9 +49,9 @@ int check_interface(netdata *data) {
 
   if (fp = fopen(data->file_operstate, "r")) {
     fgets(buf, 3, fp);
+    fclose(fp);
     if (g_strcmp0(buf, "up") == 0)
       return TRUE;
-    fclose(fp);
   }
 
   return FALSE;
@@ -116,13 +116,14 @@ int init_netload(netdata *data, const char *device) {
   g_snprintf(data->file_operstate, PATH_MAX,
            "%s/%s/operstate", dir, device, "operstate");
   
-  if (check_interface(data) != TRUE) {
+  if (access(data->file_operstate, F_OK) != 0) {
     data->correct_interface = FALSE;
     return FALSE;
   }
 
   /* init in a sane state */
   get_stat(data);
+  data->count = 0;
   data->backup_in = data->stats.rx_bytes;
   data->backup_out = data->stats.tx_bytes;
 

@@ -58,27 +58,19 @@ typedef struct {
   gulong max[SUM];
   gint update_interval;
   GdkRGBA color[SUM];
-  gchar *label_text;
   gchar *network_device;
 } t_monitor_options;
 
 typedef struct {
-  GtkWidget *label;
-  GtkWidget *status[SUM];
-
-  gulong history[SUM][HISTSIZE_STORE];
-  gulong net_max[SUM];
-
   t_monitor_options options;
 
   /* for the network part */
   netdata data;
-
+  gulong history[SUM][HISTSIZE_STORE];
+  gulong net_max[SUM];
+  
   /* Displayed text */
   GtkBox *opt_vbox;
-  GtkWidget *opt_label;
-  GtkWidget *opt_entry;
-  GtkBox *opt_hbox;
 
   /* Update interval */
   GtkWidget *update_spinner;
@@ -106,6 +98,10 @@ typedef struct {
   GtkWidget *box;
   GtkWidget *ebox_bars;
   GtkWidget *box_bars;
+  GtkWidget *img_wired;
+  GtkWidget *img_wireless;
+  GtkWidget *img_unknown;
+  GtkWidget *status[SUM];
   GtkWidget *tooltip_text;
   guint timeout_id;
   t_monitor *monitor;
@@ -129,7 +125,7 @@ static gboolean update_monitors(t_global_monitor *global) {
   gint i, j;
 
   if (!interface_up(&(global->monitor->data))) {
-    g_snprintf(caption, sizeof(caption), _("%s\n\nInterface down"),
+    g_snprintf(caption, sizeof(caption), _("Interface: %s\n\nInterface down"),
                global->monitor->data.if_name);
     gtk_label_set_text(GTK_LABEL(global->tooltip_text), caption);
 
@@ -192,8 +188,7 @@ static gboolean update_monitors(t_global_monitor *global) {
       temp = 0.0;
     }
 
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(global->monitor->status[i]),
-                                  temp);
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(global->status[i]), temp);
 
     format_byte_humanreadable(buffer[i], BUFSIZ - 1, display[i], 2, FALSE);
     format_byte_humanreadable(buffer_panel[i], BUFSIZ - 1, display[i], 2, FALSE);
@@ -205,7 +200,7 @@ static gboolean update_monitors(t_global_monitor *global) {
 
   {
     g_snprintf(caption, sizeof(caption),
-               _("%s\n\n"
+               _("Interface: %s\n\n"
                  "Download: %s\n"
                  "Upload: %s\n"
                  "---------\n"
@@ -239,13 +234,11 @@ static gboolean monitor_set_size(XfcePanelPlugin *plugin, int size,
 
   if (mode == XFCE_PANEL_PLUGIN_MODE_VERTICAL) {
     for (i = 0; i < SUM; i++)
-      gtk_widget_set_size_request(GTK_WIDGET(global->monitor->status[i]), -1,
-                                  BORDER);
+      gtk_widget_set_size_request(GTK_WIDGET(global->status[i]), -1, BORDER);
     gtk_widget_set_size_request(GTK_WIDGET(plugin), size, -1);
   } else {
     for (i = 0; i < SUM; i++)
-      gtk_widget_set_size_request(GTK_WIDGET(global->monitor->status[i]),
-                                  BORDER, -1);
+      gtk_widget_set_size_request(GTK_WIDGET(global->status[i]), BORDER, -1);
     gtk_widget_set_size_request(GTK_WIDGET(plugin), -1, size);
   }
 
@@ -274,12 +267,11 @@ static void monitor_set_mode(XfcePanelPlugin *plugin, XfcePanelPluginMode mode,
     gtk_orientable_set_orientation(GTK_ORIENTABLE(global->box_bars),
                                    GTK_ORIENTATION_HORIZONTAL);
   }
-  gtk_label_set_angle(GTK_LABEL(global->monitor->label), 0);
+
   for (i = 0; i < SUM; i++) {
-    gtk_orientable_set_orientation(GTK_ORIENTABLE(global->monitor->status[i]),
+    gtk_orientable_set_orientation(GTK_ORIENTABLE(global->status[i]),
                                    GTK_ORIENTATION_HORIZONTAL);
-    gtk_progress_bar_set_inverted(GTK_PROGRESS_BAR(global->monitor->status[i]),
-                                  FALSE);
+    gtk_progress_bar_set_inverted(GTK_PROGRESS_BAR(global->status[i]), FALSE);
   }
 
   monitor_set_size(plugin, xfce_panel_plugin_get_size(plugin), global);
@@ -296,10 +288,6 @@ static gboolean tooltip_cb(GtkWidget *widget, gint x, gint y, gboolean keyboard,
 static void monitor_free(XfcePanelPlugin *plugin, t_global_monitor *global) {
   if (global->timeout_id) {
     g_source_remove(global->timeout_id);
-  }
-
-  if (global->monitor->options.label_text) {
-    g_free(global->monitor->options.label_text);
   }
 
   gtk_widget_destroy(global->tooltip_text);
@@ -331,7 +319,6 @@ static t_global_monitor *monitor_new(XfcePanelPlugin *plugin) {
   xfce_panel_plugin_add_action_widget(plugin, global->ebox);
 
   global->monitor = g_new(t_monitor, 1);
-  global->monitor->options.label_text = g_strdup(_("Net"));
   global->monitor->options.network_device = g_strdup("");
   global->monitor->options.auto_max = TRUE;
   global->monitor->options.update_interval = UPDATE_TIMEOUT;
@@ -354,24 +341,21 @@ static t_global_monitor *monitor_new(XfcePanelPlugin *plugin) {
   gtk_container_set_border_width(GTK_CONTAINER(global->box), 2);
   gtk_widget_show(GTK_WIDGET(global->box));
 
-  /* Create the title label */
-  global->monitor->label = gtk_label_new(global->monitor->options.label_text);
-  gtk_widget_set_name(GTK_WIDGET(global->monitor->label), "label");
-  gtk_box_pack_start(GTK_BOX(global->box), GTK_WIDGET(global->monitor->label),
-                     FALSE, FALSE, 2);
-  css_provider = gtk_css_provider_new();
-  gtk_style_context_add_provider(GTK_STYLE_CONTEXT(gtk_widget_get_style_context(
-                                     GTK_WIDGET(global->monitor->label))),
-                                 GTK_STYLE_PROVIDER(css_provider),
-                                 GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-  g_object_set_data(G_OBJECT(global->monitor->label), "css_provider",
-                    css_provider);
-  gtk_css_provider_load_from_data(
-      g_object_get_data(G_OBJECT(global->monitor->label), "css_provider"),
-      "label { font-weight: Bold; \
-               font-size: 7pt; \
-               font-family: \"Bitstream Vera Sans\"; \
-               color: #696969; }", -1, NULL);
+  /* Create the title image */
+  global->img_unknown = gtk_image_new_from_icon_name(
+      "network-offline", GTK_ICON_SIZE_LARGE_TOOLBAR);
+  gtk_box_pack_start(GTK_BOX(global->box), global->img_unknown, FALSE, FALSE,
+                     0);
+  gtk_widget_show(global->img_unknown);
+
+  global->img_wired = gtk_image_new_from_icon_name("network-wired",
+                                                   GTK_ICON_SIZE_LARGE_TOOLBAR);
+  gtk_box_pack_start(GTK_BOX(global->box), global->img_wired, FALSE, FALSE, 0);
+
+  global->img_wireless = gtk_image_new_from_icon_name(
+      "network-wireless", GTK_ICON_SIZE_LARGE_TOOLBAR);
+  gtk_box_pack_start(GTK_BOX(global->box), global->img_wireless, FALSE, FALSE,
+                     0);
 
   /* Create the progress bars */
   global->ebox_bars = gtk_event_box_new();
@@ -381,21 +365,21 @@ static t_global_monitor *monitor_new(XfcePanelPlugin *plugin) {
   global->box_bars = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 0);
   gtk_widget_show(global->box_bars);
   for (i = 0; i < SUM; i++) {
-    global->monitor->status[i] = GTK_WIDGET(gtk_progress_bar_new());
+    global->status[i] = GTK_WIDGET(gtk_progress_bar_new());
 
     css_provider = gtk_css_provider_new();
     gtk_style_context_add_provider(
-        GTK_STYLE_CONTEXT(gtk_widget_get_style_context(
-            GTK_WIDGET(global->monitor->status[i]))),
+        GTK_STYLE_CONTEXT(
+            gtk_widget_get_style_context(GTK_WIDGET(global->status[i]))),
         GTK_STYLE_PROVIDER(css_provider),
         GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 
-    g_object_set_data(G_OBJECT(global->monitor->status[i]), "css_provider",
+    g_object_set_data(G_OBJECT(global->status[i]), "css_provider",
                       css_provider);
 
-    gtk_box_pack_start(GTK_BOX(global->box_bars),
-                       GTK_WIDGET(global->monitor->status[i]), TRUE, TRUE, 0);
-    gtk_widget_show(global->monitor->status[i]);
+    gtk_box_pack_start(GTK_BOX(global->box_bars), GTK_WIDGET(global->status[i]),
+                       TRUE, TRUE, 0);
+    gtk_widget_show(global->status[i]);
   }
   gtk_container_add(GTK_CONTAINER(global->ebox_bars),
                     GTK_WIDGET(global->box_bars));
@@ -435,10 +419,6 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
   if (global->timeout_id)
     g_source_remove(global->timeout_id);
 
-  gtk_label_set_text(GTK_LABEL(global->monitor->label),
-                     global->monitor->options.label_text);
-  gtk_widget_show(global->monitor->label);
-
   gtk_widget_show(global->ebox_bars);
   for (i = 0; i < SUM; i++) {
     /* Automatic or fixed maximum */
@@ -449,17 +429,16 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
 
       /* Set bar colors */
 #if GTK_CHECK_VERSION(3, 16, 0)
-    set_progressbar_csscolor(global->monitor->status[i],
+    set_progressbar_csscolor(global->status[i],
                              &global->monitor->options.color[i]);
 #else
-    gtk_widget_override_background_color(GTK_WIDGET(global->monitor->status[i]),
+    gtk_widget_override_background_color(GTK_WIDGET(global->status[i]),
                                          GTK_STATE_PRELIGHT,
                                          &global->monitor->options.color[i]);
-    gtk_widget_override_background_color(GTK_WIDGET(global->monitor->status[i]),
+    gtk_widget_override_background_color(GTK_WIDGET(global->status[i]),
                                          GTK_STATE_SELECTED,
                                          &global->monitor->options.color[i]);
-    gtk_widget_override_color(GTK_WIDGET(global->monitor->status[i]),
-                              GTK_STATE_SELECTED,
+    gtk_widget_override_color(GTK_WIDGET(global->status[i]), GTK_STATE_SELECTED,
                               &global->monitor->options.color[i]);
 #endif
   }
@@ -473,6 +452,17 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
         _("Interface was not found"));
   }
 
+  // data.wireless is only set AFTER init_netload()
+  if(global->monitor->data.wireless) {
+    gtk_widget_hide(GTK_WIDGET(global->img_unknown));
+    gtk_widget_hide(GTK_WIDGET(global->img_wired));
+    gtk_widget_show(GTK_WIDGET(global->img_wireless));
+  } else {
+    gtk_widget_hide(GTK_WIDGET(global->img_unknown));
+    gtk_widget_show(GTK_WIDGET(global->img_wired));
+    gtk_widget_hide(GTK_WIDGET(global->img_wireless));
+  }
+  
   monitor_set_mode(global->plugin, xfce_panel_plugin_get_mode(global->plugin),
                    global);
 
@@ -499,11 +489,6 @@ static void monitor_read_config(XfcePanelPlugin *plugin,
   }
   if ((value = xfce_rc_read_entry(rc, "Color_Out", NULL)) != NULL) {
     gdk_rgba_parse(&global->monitor->options.color[OUT], value);
-  }
-  if ((value = xfce_rc_read_entry(rc, "Text", NULL)) && *value) {
-    if (global->monitor->options.label_text)
-      g_free(global->monitor->options.label_text);
-    global->monitor->options.label_text = g_strdup(value);
   }
 
   if ((value = xfce_rc_read_entry(rc, "Network_Device", NULL)) && *value) {
@@ -550,11 +535,6 @@ static void monitor_write_config(XfcePanelPlugin *plugin,
   xfce_rc_write_entry(rc, "Color_Out",
                       gdk_rgba_to_string(&global->monitor->options.color[OUT]));
 
-  xfce_rc_write_entry(rc, "Text",
-                      global->monitor->options.label_text
-                          ? global->monitor->options.label_text
-                          : "");
-
   xfce_rc_write_entry(rc, "Network_Device",
                       global->monitor->options.network_device
                           ? global->monitor->options.network_device
@@ -577,13 +557,6 @@ static void monitor_write_config(XfcePanelPlugin *plugin,
 static void monitor_apply_options(t_global_monitor *global) {
   gint i;
 
-  if (global->monitor->options.label_text) {
-    g_free(global->monitor->options.label_text);
-  }
-
-  global->monitor->options.label_text =
-      g_strdup(gtk_entry_get_text(GTK_ENTRY(global->monitor->opt_entry)));
-
   if (global->monitor->options.network_device) {
     g_free(global->monitor->options.network_device);
   }
@@ -605,19 +578,6 @@ static void monitor_apply_options(t_global_monitor *global) {
 
   setup_monitor(global, FALSE);
   DBG("monitor_apply_options_cb");
-}
-
-/* -------------------------------------------------------------------------- */
-static void label_changed(GtkWidget *button, t_global_monitor *global) {
-  if (global->monitor->options.label_text) {
-    g_free(global->monitor->options.label_text);
-  }
-
-  global->monitor->options.label_text =
-      g_strdup(gtk_entry_get_text(GTK_ENTRY(global->monitor->opt_entry)));
-
-  setup_monitor(global, FALSE);
-  DBG("label_changed");
 }
 
 static void max_label_changed(GtkWidget *button, t_global_monitor *global) {
@@ -735,29 +695,6 @@ static void monitor_create_options(XfcePanelPlugin *plugin,
   global->monitor->opt_vbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_VERTICAL, 5));
   gtk_widget_show(GTK_WIDGET(global->monitor->opt_vbox));
 
-  /* Displayed text */
-  global->monitor->opt_hbox =
-      GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
-  gtk_widget_show(GTK_WIDGET(global->monitor->opt_hbox));
-
-  global->monitor->opt_label = gtk_label_new(_("Label:"));
-  gtk_widget_show(global->monitor->opt_label);
-  gtk_box_pack_start(GTK_BOX(global->monitor->opt_hbox),
-                     GTK_WIDGET(global->monitor->opt_label), FALSE, FALSE,
-                     0);
-  gtk_size_group_add_widget(sg, global->monitor->opt_label);
-
-  global->monitor->opt_entry = gtk_entry_new();
-  gtk_entry_set_max_length(GTK_ENTRY(global->monitor->opt_entry), MAX_LENGTH);
-  gtk_entry_set_text(GTK_ENTRY(global->monitor->opt_entry),
-                     global->monitor->options.label_text);
-  gtk_widget_show(global->monitor->opt_entry);
-  gtk_box_pack_start(GTK_BOX(global->monitor->opt_hbox),
-                     GTK_WIDGET(global->monitor->opt_entry), FALSE, FALSE, 0);
-
-  gtk_box_pack_start(GTK_BOX(global->monitor->opt_vbox),
-                     GTK_WIDGET(global->monitor->opt_hbox), FALSE, FALSE, 0);
-
   /* Network device */
   net_hbox = GTK_BOX(gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 5));
   gtk_box_pack_start(GTK_BOX(global->monitor->opt_vbox), GTK_WIDGET(net_hbox),
@@ -775,7 +712,7 @@ static void monitor_create_options(XfcePanelPlugin *plugin,
   gtk_entry_set_max_length(GTK_ENTRY(global->monitor->net_entry), MAX_LENGTH);
   gtk_entry_set_text(GTK_ENTRY(global->monitor->net_entry),
                      global->monitor->options.network_device);
-  gtk_widget_show(global->monitor->opt_entry);
+  gtk_widget_show(global->monitor->net_entry);
 
   gtk_box_pack_start(GTK_BOX(net_hbox), GTK_WIDGET(global->monitor->net_entry),
                      FALSE, FALSE, 0);
@@ -921,8 +858,6 @@ static void monitor_create_options(XfcePanelPlugin *plugin,
                    G_CALLBACK(change_color_in), global);
   g_signal_connect(GTK_WIDGET(global->monitor->opt_button[OUT]), "color-set",
                    G_CALLBACK(change_color_out), global);
-  g_signal_connect(GTK_WIDGET(global->monitor->opt_entry), "activate",
-                   G_CALLBACK(label_changed), global);
   g_signal_connect(GTK_WIDGET(global->monitor->net_entry), "activate",
                    G_CALLBACK(network_changed), global);
 

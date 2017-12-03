@@ -48,6 +48,7 @@ typedef struct {
   double cur_in;
   double cur_out;
   int correct_interface;
+  int wireless;
   struct timeval prev_time;
   DataStats stats;
   char if_name[INTERFACE_NAME_LENGTH];

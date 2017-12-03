@@ -99,9 +99,11 @@ int get_stat(netdata *data) {
   return 1;
 }
 
-/* -------------------------------------------------------------------------- */
 int init_netload(netdata *data, const char *device) {
-  const char* dir = "/sys/class/net/";
+  const char* dir = "/sys/class/net";
+  char dir_wireless[PATH_MAX];
+  DIR* d = NULL;
+  
   memset(data, 0, sizeof(netdata));
 
   if (device == NULL || strlen(device) == 0) {
@@ -123,18 +125,24 @@ int init_netload(netdata *data, const char *device) {
 
   /* init in a sane state */
   get_stat(data);
-  data->count = 0;
   data->backup_in = data->stats.rx_bytes;
   data->backup_out = data->stats.tx_bytes;
 
   data->correct_interface = TRUE;
 
+  /* Check if the interface is a wired or wireless network */
+  data->wireless = FALSE;
+  g_snprintf(dir_wireless, PATH_MAX, "%s/%s/wireless", dir, device);
+  if((d = opendir(dir_wireless))) {
+    closedir(d);
+    data->wireless = TRUE;
+  }
+  
   DBG("The netload plugin was initialized for '%s'.", device);
 
   return TRUE;
 }
 
-/* -------------------------------------------------------------------------- */
 void get_current_netload(netdata *data, unsigned long *in, unsigned long *out,
                          unsigned long *tot) {
   struct timeval curr_time;

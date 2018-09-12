@@ -68,7 +68,7 @@ typedef struct {
   netdata data;
   gulong history[SUM][HISTSIZE_STORE];
   gulong net_max[SUM];
-  
+
   /* Displayed text */
   GtkBox *opt_vbox;
 
@@ -125,9 +125,12 @@ static gboolean update_monitors(t_global_monitor *global) {
   gint i, j;
 
   if (!interface_up(&(global->monitor->data))) {
-    g_snprintf(caption, sizeof(caption), _("Interface: %s\n\nInterface down"),
+    g_snprintf(caption, sizeof(caption),
+               "<tt>%s\n"
+               "--------------\n"
+               "Interface down</tt>",
                global->monitor->data.if_name);
-    gtk_label_set_text(GTK_LABEL(global->tooltip_text), caption);
+    gtk_label_set_markup(GTK_LABEL(global->tooltip_text), caption);
 
     return TRUE;
   }
@@ -191,23 +194,24 @@ static gboolean update_monitors(t_global_monitor *global) {
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(global->status[i]), temp);
 
     format_byte_humanreadable(buffer[i], BUFSIZ - 1, display[i], 2, FALSE);
-    format_byte_humanreadable(buffer_panel[i], BUFSIZ - 1, display[i], 2, FALSE);
-   }
+    format_byte_humanreadable(buffer_panel[i], BUFSIZ - 1, display[i], 2,
+                              FALSE);
+  }
 
   format_byte_humanreadable(buffer[TOT], BUFSIZ - 1,
-                            (display[IN] + display[OUT]), 2,
-                            FALSE);
+                            (display[IN] + display[OUT]), 2, FALSE);
 
   {
     g_snprintf(caption, sizeof(caption),
-               _("Interface: %s\n\n"
-                 "Download: %s\n"
-                 "Upload: %s\n"
-                 "---------\n"
-                 "Total: %s"),
-               global->monitor->data.if_name, buffer[IN],
-               buffer[OUT], buffer[TOT]);
-    gtk_label_set_text(GTK_LABEL(global->tooltip_text), caption);
+               _("<tt>%s\n"
+                 "------------------\n"
+                 "Download  %s\n"
+                 "Upload    %s\n"
+                 "------------------\n"
+                 "Total     %s</tt>"),
+               global->monitor->data.if_name, buffer[IN], buffer[OUT],
+               buffer[TOT]);
+    gtk_label_set_markup(GTK_LABEL(global->tooltip_text), caption);
   }
 
   return TRUE;
@@ -401,8 +405,8 @@ static void set_progressbar_csscolor(GtkWidget *pbar, GdkRGBA *color) {
 #else
   css = g_strdup_printf(
       "progressbar progress { background-color: %s; min-height: 5px; } \
-      progressbar trough { min-height: 5px; border-radius: 1; } \
-      progressbar empty { min-height: 5px; border-radius: 1; } \
+      progressbar trough { min-height: 5px; border-radius: 1; }        \
+      progressbar empty { min-height: 5px; border-radius: 1; }          \
       netspeed-title { font-weight: bold; font-family: Sans; font-size: 9.8pt; }",
 #endif
       gdk_rgba_to_string(color));
@@ -442,18 +446,17 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
                               &global->monitor->options.color[i]);
 #endif
   }
-
+  
   if (!init_netload(&(global->monitor->data),
                     global->monitor->options.network_device) &&
       !supress_warnings) {
-    xfce_dialog_show_error(
-        NULL, NULL, _("%s: Error initializing applet\n%s"),
-        _("xfce4-applet-netspeed"),
-        _("Interface was not found"));
+    xfce_dialog_show_error(NULL, NULL, _("%s: Error initializing applet\n%s"),
+                           _("xfce4-applet-netspeed"),
+                           _("Interface was not found"));
   }
 
   // data.wireless is only set AFTER init_netload()
-  if(global->monitor->data.wireless) {
+  if (global->monitor->data.wireless) {
     gtk_widget_hide(GTK_WIDGET(global->img_unknown));
     gtk_widget_hide(GTK_WIDGET(global->img_wired));
     gtk_widget_show(GTK_WIDGET(global->img_wireless));
@@ -462,7 +465,7 @@ static void setup_monitor(t_global_monitor *global, gboolean supress_warnings) {
     gtk_widget_show(GTK_WIDGET(global->img_wired));
     gtk_widget_hide(GTK_WIDGET(global->img_wireless));
   }
-  
+
   monitor_set_mode(global->plugin, xfce_panel_plugin_get_mode(global->plugin),
                    global);
 
